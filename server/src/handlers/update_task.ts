@@ -1,19 +1,37 @@
+import { db } from '../db';
+import { tasksTable } from '../db/schema';
 import { type UpdateTaskInput, type Task } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateTask(input: UpdateTaskInput): Promise<Task> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating an existing task in the database.
-    // It should update only the provided fields (partial update).
-    // The updated_at field should be automatically set to current timestamp.
-    // This allows kids to edit their tasks and change colors for fun customization.
-    return Promise.resolve({
-        id: input.id,
-        title: input.title || 'Updated Task', // Placeholder
-        description: input.description !== undefined ? input.description : null,
-        is_completed: input.is_completed || false,
-        order_position: 1, // Placeholder position
-        theme_color: input.theme_color || 'blue',
-        created_at: new Date(), // Placeholder date
-        updated_at: new Date() // Current timestamp
-    } as Task);
-}
+export const updateTask = async (input: UpdateTaskInput): Promise<Task> => {
+  try {
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date()
+    };
+
+    if (input.title !== undefined) updateData.title = input.title;
+    if (input.description !== undefined) updateData.description = input.description;
+    if (input.is_completed !== undefined) updateData.is_completed = input.is_completed;
+    if (input.theme_color !== undefined) updateData.theme_color = input.theme_color;
+
+    const result = await db.update(tasksTable)
+      .set(updateData)
+      .where(eq(tasksTable.id, input.id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`Task with id ${input.id} not found`);
+    }
+
+    const task = result[0];
+    return {
+      ...task,
+      description: task.description || null // Ensure null handling
+    };
+  } catch (error) {
+    console.error('Task update failed:', error);
+    throw error;
+  }
+};

@@ -1,9 +1,21 @@
+import { db } from '../db';
+import { tasksTable } from '../db/schema';
 import { type Task } from '../schema';
+import { asc } from 'drizzle-orm';
 
-export async function getTasks(): Promise<Task[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching all tasks from the database.
-    // Tasks should be ordered by order_position ASC to maintain the user's drag-and-drop order.
-    // This enables the kiddy to-do list to display tasks in the correct sequence.
-    return [];
-}
+export const getTasks = async (): Promise<Task[]> => {
+  try {
+    const results = await db.select()
+      .from(tasksTable)
+      .orderBy(asc(tasksTable.order_position))
+      .execute();
+
+    return results.map(task => ({
+      ...task,
+      description: task.description || null // Ensure null handling
+    }));
+  } catch (error) {
+    console.error('Failed to get tasks:', error);
+    throw error;
+  }
+};
